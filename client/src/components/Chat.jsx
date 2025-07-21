@@ -1,11 +1,10 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Box, Paper, Menu } from '@mui/material';
 import { useSocket } from '../context/SocketContext';
 import UserList from './UserList';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
-
-const REACTIONS = ['👍', '❤️', '😄', '😮', '😢', '😡'];
+import { notificationService } from '../services/NotificationService';
 
 const Chat = ({ username }) => {
     const [selectedUser, setSelectedUser] = useState(null);
@@ -29,25 +28,31 @@ const Chat = ({ username }) => {
         setTyping,
     } = useSocket();
 
-    const handleSend = (message) => {
+    const handleSend = useCallback((message) => {
         if (selectedUser) {
             sendPrivateMessage(selectedUser.id, message);
+            notificationService.playNotificationSound();
         } else {
             sendMessage(message);
         }
-    };
+    }, [selectedUser, sendPrivateMessage, sendMessage]);
 
-    const handleReactionClick = (message, event) => {
+    const handleReactionClick = useCallback((message, event) => {
         setSelectedMessage(message);
         setReactionAnchorEl(event.currentTarget);
-    };
+    }, []);
 
-    const handleAddReaction = (reaction) => {
+    const handleAddReaction = useCallback((reaction) => {
         if (selectedMessage) {
             addReaction(selectedMessage.id, reaction);
         }
         setReactionAnchorEl(null);
-    };
+    }, [selectedMessage, addReaction]);
+
+    const handleFileUpload = useCallback((fileData) => {
+        shareFile(fileData);
+        notificationService.playNotificationSound();
+    }, [shareFile]);
 
     const displayMessages = selectedUser
         ? (privateMessages[selectedUser.id] || [])
@@ -59,6 +64,7 @@ const Chat = ({ username }) => {
                 <UserList
                     onUserSelect={setSelectedUser}
                     selectedUser={selectedUser}
+                    currentUsername={username}
                 />
             </Paper>
 
@@ -76,7 +82,7 @@ const Chat = ({ username }) => {
             <Paper>
                 <MessageInput
                     onSend={handleSend}
-                    onFileUpload={shareFile}
+                    onFileUpload={handleFileUpload}
                     onTyping={setTyping}
                     placeholder={selectedUser ? `Message ${selectedUser.username}...` : "Type a message..."}
                 />
@@ -88,7 +94,7 @@ const Chat = ({ username }) => {
                 onClose={() => setReactionAnchorEl(null)}
             >
                 <Box sx={{ display: 'flex', p: 1 }}>
-                    {REACTIONS.map(reaction => (
+                    {['👍', '❤️', '😄', '😮', '😢', '😡'].map(reaction => (
                         <Box
                             key={reaction}
                             sx={{

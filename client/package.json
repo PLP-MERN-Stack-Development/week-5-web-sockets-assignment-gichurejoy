@@ -17,7 +17,9 @@
         "@emotion/styled": "^11.11.0",
         "@mui/material": "^5.15.12",
         "@mui/icons-material": "^5.15.12",
-        "date-fns": "^3.3.1"
+        "date-fns": "^3.3.1",
+        "react-virtuoso": "^4.7.2",
+        "lodash": "^4.17.21"
     },
     "devDependencies": {
         "@types/react": "^18.2.56",
