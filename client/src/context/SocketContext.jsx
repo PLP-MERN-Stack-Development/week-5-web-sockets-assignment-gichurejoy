@@ -43,13 +43,17 @@ export const SocketProvider = ({ children, username }) => {
 
         newSocket.on('connect', () => {
             console.log('Connected to server');
-            newSocket.emit('authenticate', username);
+            newSocket.emit('user_join', username);
             // Load initial messages
             newSocket.emit('loadPreviousMessages', { page: 0, limit: 20 });
         });
 
         newSocket.on('connect_error', (error) => {
             console.error('Socket connection error:', error);
+        });
+
+        newSocket.on('user_list', (users) => {
+            setUsers(users);
         });
 
         newSocket.on('userJoined', ({ users: connectedUsers }) => {
@@ -65,7 +69,7 @@ export const SocketProvider = ({ children, username }) => {
             showNotification('New Message', `${message.user}: ${message.text}`);
         });
 
-        newSocket.on('privateMessage', (message) => {
+        newSocket.on('private_message', (message) => {
             setPrivateMessages((prev) => ({
                 ...prev,
                 [message.senderId === socket?.id ? message.recipientId : message.senderId]: [
@@ -128,13 +132,13 @@ export const SocketProvider = ({ children, username }) => {
 
     const sendMessage = (message) => {
         if (socket) {
-            socket.emit('sendMessage', message);
+            socket.emit('message', message);
         }
     };
 
     const sendPrivateMessage = (recipientId, message) => {
         if (socket) {
-            socket.emit('sendPrivateMessage', { recipientId, message });
+            socket.emit('private_message', { recipientId, message });
         }
     };
 

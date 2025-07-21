@@ -11,7 +11,7 @@ const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.CLIENT_URL || "http://localhost:5174", // Updated port
+    origin: process.env.CLIENT_URL || "http://localhost:5174",
     methods: ["GET", "POST"]
   },
   transports: ['websocket'],
@@ -32,14 +32,15 @@ io.on('connection', (socket) => {
   console.log('A user connected:', socket.id);
 
   // Handle user authentication
-  socket.on('authenticate', (username) => {
+  socket.on('user_join', (username) => { // Changed from 'authenticate' to 'user_join'
     connectedUsers.set(socket.id, {
       username,
       id: socket.id,
       isTyping: false
     });
 
-    // Broadcast user joined
+    // Broadcast user joined and update online users list
+    io.emit('user_list', Array.from(connectedUsers.values())); // Added explicit user_list event
     io.emit('userJoined', {
       username,
       id: socket.id,
@@ -48,7 +49,7 @@ io.on('connection', (socket) => {
   });
 
   // Handle chat messages
-  socket.on('sendMessage', (message) => {
+  socket.on('message', (message) => { // Changed from 'sendMessage' to 'message'
     const user = connectedUsers.get(socket.id);
     if (user) {
       const messageData = {
@@ -64,7 +65,7 @@ io.on('connection', (socket) => {
   });
 
   // Handle private messages
-  socket.on('sendPrivateMessage', ({ recipientId, message }) => {
+  socket.on('private_message', ({ recipientId, message }) => { // Changed from 'sendPrivateMessage'
     const sender = connectedUsers.get(socket.id);
     const recipient = connectedUsers.get(recipientId);
 
@@ -79,7 +80,6 @@ io.on('connection', (socket) => {
         reactions: {}
       };
 
-      // Store private messages
       if (!privateMessages.has(socket.id)) {
         privateMessages.set(socket.id, []);
       }
@@ -89,9 +89,8 @@ io.on('connection', (socket) => {
       privateMessages.get(socket.id).push(messageData);
       privateMessages.get(recipientId).push(messageData);
 
-      // Send to both sender and recipient
-      io.to(socket.id).emit('privateMessage', messageData);
-      io.to(recipientId).emit('privateMessage', messageData);
+      io.to(socket.id).emit('private_message', messageData);
+      io.to(recipientId).emit('private_message', messageData);
     }
   });
 
@@ -167,6 +166,7 @@ io.on('connection', (socket) => {
     const user = connectedUsers.get(socket.id);
     if (user) {
       connectedUsers.delete(socket.id);
+      io.emit('user_list', Array.from(connectedUsers.values())); // Added explicit user_list event
       io.emit('userLeft', {
         username: user.username,
         id: socket.id,
